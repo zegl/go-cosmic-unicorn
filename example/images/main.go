@@ -3,7 +3,7 @@ package main
 import (
 	"embed"
 
-	"github.com/zegl/cosmic_unicorn"
+	cosmic "github.com/zegl/go-cosmic-unicorn"
 
 	_ "embed"
 	"image/color"
@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	cu := cosmic_unicorn.CosmicUnicorn{}
+	cu := cosmic.CosmicUnicorn{}
 	cu.Init()
 
 	var fileIdx int
@@ -26,8 +26,8 @@ func main() {
 		drawImage(files[fileIdx], cu.SetColor)
 	}
 
-	cosmic_unicorn.SWITCH_A.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
-	cosmic_unicorn.SWITCH_A.SetInterrupt(machine.PinFalling, func(p machine.Pin) {
+	cosmic.SWITCH_A.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
+	cosmic.SWITCH_A.SetInterrupt(machine.PinFalling, func(p machine.Pin) {
 		pressedA = true
 	})
 

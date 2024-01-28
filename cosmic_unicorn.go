@@ -1,4 +1,4 @@
-package cosmic_unicorn
+package cosmic
 
 import (
 	"image/color"
