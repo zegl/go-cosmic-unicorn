@@ -1,9 +1,13 @@
+//go:generate pioasm -o go cosmic_unicorn.pio cosmic_unicorn_pio.go
+
 package cosmic
 
 import (
 	"image/color"
 	"machine"
 	"time"
+
+	pio "github.com/tinygo-org/pio/rp2-pio"
 )
 
 const WIDTH = 32
@@ -126,6 +130,86 @@ func (c *CosmicUnicorn) Init() {
 	COLUMN_BLANK.Set(false)
 	MUTE.Set(true)
 
+	// Sleep to catch prints.
+	print("boot1")
+	time.Sleep(time.Second * 5)
+	print("boot2")
+
+	Pio := pio.PIO0
+
+	offset, err := Pio.AddProgram(cosmic_unicornInstructions, cosmic_unicornOrigin)
+	if err != nil {
+		panic(err.Error())
+	}
+	println("Loaded program at", offset)
+
+	sm := Pio.StateMachine(0)
+	/*pin.Configure(machine.PinConfig{Mode: sm.PIO().PinMode()})
+	sm.SetConsecutivePinDirs(pin, 1, true)
+	*/
+	cfg := cosmic_unicornProgramDefaultConfig(offset)
+
+	var pins_to_set uint32 = uint32(1)<<COLUMN_BLANK | 0b1111<<ROW_BIT_0
+	sm.SetPinsMasked(pins_to_set, pins_to_set)
+	sm.SetPindirsConsecutive(COLUMN_CLOCK, 8, true)
+
+	// TODO??
+
+	// osr shifts right, autopull on, autopull threshold 8
+	// cfg.SetOutShift(true, true, 32)
+
+	// pio.
+
+	// configure out, set, and sideset pins
+	cfg.SetOutPins(ROW_BIT_0, 4)
+	cfg.SetSetPins(COLUMN_DATA, 3)
+	cfg.SetSidesetPins(COLUMN_CLOCK)
+
+	// join fifos as only tx needed (gives 8 deep fifo instead of 4)
+	cfg.SetFIFOJoin(pio.FifoJoinTx)
+
+	// piolib.NewParallel8Tx()
+
+	// DMA???
+
+	sm.Init(offset, cfg)
+
+	sm.SetEnabled(true)
+
+	p := [72]uint32{
+		64 - 1,
+		0,
+		0b1,
+		0b10,
+		0b100,
+		0b11111111,
+	}
+	frame := 1
+	var bcd_ticks uint32 = (1 << frame)
+	p[68] = 0   // (bcd_ticks & 0xff) >> 0
+	p[69] = 0   // (bcd_ticks & 0xff00) >> 8
+	p[70] = 255 // (bcd_ticks & 0xff0000) >> 16
+	p[71] = (bcd_ticks & 0xff000000) >> 24
+
+	for {
+		time.Sleep(time.Microsecond * 100)
+		for k, v := range p {
+			println(k, v)
+
+			for {
+				if sm.IsTxFIFOFull() {
+					println("full")
+					continue
+				} else {
+					break
+				}
+			}
+
+			sm.TxPut(v)
+		}
+
+	}
+
 }
 
 //go:nobounds
@@ -161,7 +245,7 @@ func (c *CosmicUnicorn) Draw() {
 			COLUMN_LATCH.Set(false)
 			COLUMN_DATA.Set(false)
 
-			time.Sleep(1)
+			time.Sleep(time.Microsecond * 50)
 
 			COLUMN_BLANK.Set(true) // blank high (disable output)
 			COLUMN_LATCH.Set(false)

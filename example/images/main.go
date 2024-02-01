@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"time"
 
 	cosmic "github.com/zegl/go-cosmic-unicorn"
 
@@ -32,7 +33,12 @@ func main() {
 	})
 
 	// Draw default image
-	drawImage(files[fileIdx], cu.SetColor)
+	// drawImage(files[fileIdx], cu.SetColor)
+	// cu.Draw()
+
+	for {
+		time.Sleep(time.Second)
+	}
 
 	for {
 		if pressedA {
