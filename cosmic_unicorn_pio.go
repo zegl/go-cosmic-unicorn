@@ -7,38 +7,34 @@ import (
 // cosmic_unicorn
 
 const cosmic_unicornWrapTarget = 0
-const cosmic_unicornWrap = 27
+const cosmic_unicornWrap = 23
 
 var cosmic_unicornInstructions = []uint16{
 		//     .wrap_target
-		0x80a0, //  0: pull   block                      
-		0x6048, //  1: out    y, 8                       
-		0x80a0, //  2: pull   block                      
-		0x6008, //  3: out    pins, 8                    
-		0x80a0, //  4: pull   block                      
-		0x7121, //  5: out    x, 1            side 0 [1] 
-		0xe004, //  6: set    pins, 4                    
-		0x0029, //  7: jmp    !x, 9                      
-		0xe005, //  8: set    pins, 5                    
-		0xba42, //  9: nop                    side 1 [2] 
-		0x7121, // 10: out    x, 1            side 0 [1] 
-		0xe004, // 11: set    pins, 4                    
-		0x002e, // 12: jmp    !x, 14                     
-		0xe005, // 13: set    pins, 5                    
-		0xba42, // 14: nop                    side 1 [2] 
-		0x7121, // 15: out    x, 1            side 0 [1] 
-		0xe004, // 16: set    pins, 4                    
-		0x0033, // 17: jmp    !x, 19                     
-		0xe005, // 18: set    pins, 5                    
-		0x7a65, // 19: out    null, 5         side 1 [2] 
-		0x0084, // 20: jmp    y--, 4                     
-		0x6070, // 21: out    null, 16                   
-		0xe506, // 22: set    pins, 6                [5] 
-		0xe000, // 23: set    pins, 0                    
-		0x80a0, // 24: pull   block                      
-		0x6040, // 25: out    y, 32                      
-		0x009a, // 26: jmp    y--, 26                    
-		0xe004, // 27: set    pins, 4                    
+		0x6048, //  0: out    y, 8                       
+		0x6008, //  1: out    pins, 8                    
+		0x7121, //  2: out    x, 1            side 0 [1] 
+		0xe004, //  3: set    pins, 4                    
+		0x0026, //  4: jmp    !x, 6                      
+		0xe005, //  5: set    pins, 5                    
+		0xba42, //  6: nop                    side 1 [2] 
+		0x7121, //  7: out    x, 1            side 0 [1] 
+		0xe004, //  8: set    pins, 4                    
+		0x002b, //  9: jmp    !x, 11                     
+		0xe005, // 10: set    pins, 5                    
+		0xba42, // 11: nop                    side 1 [2] 
+		0x7121, // 12: out    x, 1            side 0 [1] 
+		0xe004, // 13: set    pins, 4                    
+		0x0030, // 14: jmp    !x, 16                     
+		0xe005, // 15: set    pins, 5                    
+		0x7a65, // 16: out    null, 5         side 1 [2] 
+		0x0082, // 17: jmp    y--, 2                     
+		0x6070, // 18: out    null, 16                   
+		0xe506, // 19: set    pins, 6                [5] 
+		0xe000, // 20: set    pins, 0                    
+		0x6040, // 21: out    y, 32                      
+		0x0096, // 22: jmp    y--, 22                    
+		0xe004, // 23: set    pins, 4                    
 		//     .wrap
 }
 const cosmic_unicornOrigin = -1

@@ -30,14 +30,15 @@
 
 
 .wrap_target
-
 ; loop over row pixels
-  pull block
   out y, 8                        ; get row pixel count (minus 1 because test is pre decrement)
-  pull block
   out pins, 8                     ; output row select
+
+
+  ; override row select
+  ; set x, 0b0
+  ; out x, 8
 pixels:
-    ; pull block
     
     ; blue bit
     out x, 1       side 0  [1]    ; pull in blue bit from OSR into register x, clear clock
@@ -48,7 +49,7 @@ pixels:
     nop            side 1 [2]     ; clock in bit
 
     ; green bit
-    out x, 1       side 0 [1]        ; pull in green bit from OSR into register X, clear clock
+    out x, 1       side 0 [1]     ; pull in green bit from OSR into register X, clear clock
     set pins, 0b100               ; clear data bit, blank high
     jmp !x endg                   ; if bit was zero jump
     set pins, 0b101               ; set data bit, blank high
@@ -56,14 +57,12 @@ pixels:
     nop            side 1 [2]     ; clock in bit
 
     ; red bit
-    out x, 1       side 0  [1]       ; pull in red bit from OSR into register X, clear clock
+    out x, 1       side 0  [1]    ; pull in red bit from OSR into register X, clear clock
     set pins, 0b100               ; clear data bit, blank high
     jmp !x endr                   ; if bit was zero jump
     set pins, 0b101               ; set data bit, blank high
   endr:                      
     out null, 5             side 1 [2]     ; clock in bit
-
-    ;out null, 5    side 0         ; discard the five dummy bits for this pixel
 
   jmp y-- pixels
 
@@ -73,7 +72,6 @@ pixels:
   set pins, 0b000                 ; blank low (enable output)
 
 ; loop over bcd delay period
-  pull block
   out y, 32                       ; get bcd delay counter value
 bcd_delay:
   jmp y-- bcd_delay         

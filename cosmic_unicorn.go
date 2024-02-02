@@ -3,6 +3,7 @@
 package cosmic
 
 import (
+	"fmt"
 	"image/color"
 	"machine"
 	"time"
@@ -125,9 +126,55 @@ func (c *CosmicUnicorn) Init() {
 	ROW_BIT_3.Configure(machine.PinConfig{Mode: machine.PinOutput})
 	ROW_BIT_3.Set(true)
 
+	// wtf
+	// configure full output current in register 2
+
+	var reg1 uint16 = 0b1111111111001110
+
+	// clock the register value to the first 11 driver chips
+	for j := uint16(0); j < 11; j++ {
+		for i := uint16(0); i < 16; i++ {
+			if reg1&(uint16(1)<<(15-i)) != 0 {
+				COLUMN_DATA.Set(true)
+			} else {
+				COLUMN_DATA.Set(false)
+			}
+			time.Sleep(time.Microsecond * 10)
+			COLUMN_CLOCK.Set(true)
+			time.Sleep(time.Microsecond * 10)
+			COLUMN_CLOCK.Set(false)
+		}
+	}
+
+	// clock the last chip and latch the value
+	for i := uint16(0); i < 16; i++ {
+		if reg1&(uint16(1)<<(15-i)) != 0 {
+			COLUMN_DATA.Set(true)
+		} else {
+			COLUMN_DATA.Set(false)
+		}
+
+		time.Sleep(time.Microsecond * 10)
+		COLUMN_CLOCK.Set(true)
+		time.Sleep(time.Microsecond * 10)
+		COLUMN_CLOCK.Set(false)
+
+		if i == 4 {
+			COLUMN_LATCH.Set(true)
+		}
+	}
+	COLUMN_LATCH.Set(false)
+
+	// reapply the blank as the above seems to cause a slight glow.
+	// Note, this will produce a brief flash if a visible row is selected (which it shouldn't be)
+	COLUMN_BLANK.Set(false)
+	time.Sleep(time.Microsecond * 10)
+	COLUMN_BLANK.Set(true)
+	// wtf
+
 	time.Sleep(100 * time.Millisecond)
 
-	COLUMN_BLANK.Set(false)
+	// COLUMN_BLANK.Set(false)
 	MUTE.Set(true)
 
 	// Sleep to catch prints.
@@ -144,21 +191,14 @@ func (c *CosmicUnicorn) Init() {
 	println("Loaded program at", offset)
 
 	sm := Pio.StateMachine(0)
-	/*pin.Configure(machine.PinConfig{Mode: sm.PIO().PinMode()})
-	sm.SetConsecutivePinDirs(pin, 1, true)
-	*/
 	cfg := cosmic_unicornProgramDefaultConfig(offset)
 
-	var pins_to_set uint32 = uint32(1)<<COLUMN_BLANK | 0b1111<<ROW_BIT_0
+	var pins_to_set uint32 = uint32(1)<<uint32(COLUMN_BLANK) | uint32(0b1111)<<uint32(ROW_BIT_0)
 	sm.SetPinsMasked(pins_to_set, pins_to_set)
 	sm.SetPindirsConsecutive(COLUMN_CLOCK, 8, true)
 
-	// TODO??
-
-	// osr shifts right, autopull on, autopull threshold 8
-	// cfg.SetOutShift(true, true, 32)
-
-	// pio.
+	// osr shifts right, autopull on, autopull threshold 32
+	cfg.SetOutShift(true, true, 32)
 
 	// configure out, set, and sideset pins
 	cfg.SetOutPins(ROW_BIT_0, 4)
@@ -173,32 +213,44 @@ func (c *CosmicUnicorn) Init() {
 	// DMA???
 
 	sm.Init(offset, cfg)
-
 	sm.SetEnabled(true)
 
-	p := [72]uint32{
-		64 - 1,
-		0,
-		0b1,
-		0b10,
+	p := [72]uint8{
+		64 - 1, // 8
+		1,      // 8
+		0b1,    // 8
+		0b10,   // 8
 		0b100,
-		0b11111111,
+		// yolo
+		// 16
 	}
 	frame := 1
 	var bcd_ticks uint32 = (1 << frame)
 	p[68] = 0   // (bcd_ticks & 0xff) >> 0
-	p[69] = 0   // (bcd_ticks & 0xff00) >> 8
+	p[69] = 255 // (bcd_ticks & 0xff00) >> 8
 	p[70] = 255 // (bcd_ticks & 0xff0000) >> 16
-	p[71] = (bcd_ticks & 0xff000000) >> 24
+	p[71] = 0   // (bcd_ticks & 0xff000000) >> 24
+	_ = bcd_ticks
+
+	// 32
 
 	for {
 		time.Sleep(time.Microsecond * 100)
-		for k, v := range p {
-			println(k, v)
+		for i := 0; i < 18; i++ {
+
+			var v uint32
+			v = v | (uint32(p[i*4+0]) << 0)
+			v = v | (uint32(p[i*4+1]) << 8)
+			v = v | (uint32(p[i*4+2]) << 16)
+			v = v | (uint32(p[i*4+3]) << 24)
+
+			println(i, v)
+			fmt.Printf("%032b\n", v)
 
 			for {
 				if sm.IsTxFIFOFull() {
 					println("full")
+					time.Sleep(time.Second)
 					continue
 				} else {
 					break
@@ -207,9 +259,7 @@ func (c *CosmicUnicorn) Init() {
 
 			sm.TxPut(v)
 		}
-
 	}
-
 }
 
 //go:nobounds
