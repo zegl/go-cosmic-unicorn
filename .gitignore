@@ -1,0 +1,4 @@
+.DS_Store
+*.elf
+*.uf2
+.vscode
