@@ -17,18 +17,37 @@ func main() {
 	cu.Init()
 
 	var fileIdx int
-	files := []string{"mario_box.png", "polar.png", "zegl.png"}
+	files := []string{"polar.png", "zegl.png", "mario_box.png", "gopher.png", "bread.png", "pepper.png", "pizza.png", "popcorn.png", "soda.png", "taco.png", "watermelon.png"}
 
+	// Press A to go to the next image
 	var pressedA = false
-
 	handleA := func() {
 		fileIdx = (fileIdx + 1) % len(files)
 		drawImage(files[fileIdx], cu.SetColor)
 	}
-
 	cosmic.SWITCH_A.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
 	cosmic.SWITCH_A.SetInterrupt(machine.PinFalling, func(p machine.Pin) {
 		pressedA = true
+	})
+
+	// Increase brightness
+	var pressedBrightnessUp = false
+	handleBrightnessUp := func() {
+		cu.ChangeBrightness(10)
+	}
+	cosmic.SWITCH_BRIGHTNESS_UP.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
+	cosmic.SWITCH_BRIGHTNESS_UP.SetInterrupt(machine.PinFalling, func(p machine.Pin) {
+		pressedBrightnessUp = true
+	})
+
+	// Decrease brightness
+	var pressedBrightnessDown = false
+	handleBrightnessDown := func() {
+		cu.ChangeBrightness(-10)
+	}
+	cosmic.SWITCH_BRIGHTNESS_DOWN.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
+	cosmic.SWITCH_BRIGHTNESS_DOWN.SetInterrupt(machine.PinFalling, func(p machine.Pin) {
+		pressedBrightnessDown = true
 	})
 
 	// Draw default image
@@ -38,6 +57,16 @@ func main() {
 		if pressedA {
 			pressedA = false
 			handleA()
+		}
+
+		if pressedBrightnessUp {
+			pressedBrightnessUp = false
+			handleBrightnessUp()
+		}
+
+		if pressedBrightnessDown {
+			pressedBrightnessDown = false
+			handleBrightnessDown()
 		}
 
 		cu.Draw()
