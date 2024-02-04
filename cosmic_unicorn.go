@@ -34,7 +34,7 @@ const SWITCH_BRIGHTNESS_UP = machine.GP21
 const SWITCH_BRIGHTNESS_DOWN = machine.GP26
 
 const ROW_COUNT = 16
-const FRAME_COUNT = 8 // TODO: Support even more colors!!?!
+const FRAME_COUNT = 6 // TODO: Support even more colors!!?!
 const FRAME_COL_SIZE = 32 * 2 * 3
 
 var GAMMA_8BIT = [256]uint8{
@@ -55,12 +55,31 @@ var GAMMA_8BIT = [256]uint8{
 	191, 193, 194, 196, 198, 200, 202, 204, 206, 208, 210, 212, 214, 216, 218, 220,
 	222, 224, 227, 229, 231, 233, 235, 237, 239, 241, 244, 246, 248, 250, 252, 255}
 
+var GAMMA_6BIT = [256]uint8{
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2,
+	2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4,
+	4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6,
+	6, 6, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9,
+	9, 9, 9, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12,
+	12, 13, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15, 16, 16,
+	16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 20, 20, 20,
+	20, 21, 21, 21, 22, 22, 22, 22, 23, 23, 23, 24, 24, 24, 25, 25,
+	25, 26, 26, 26, 26, 27, 27, 27, 28, 28, 28, 29, 29, 29, 30, 30,
+	30, 31, 31, 32, 32, 32, 33, 33, 33, 34, 34, 34, 35, 35, 36, 36,
+	36, 37, 37, 37, 38, 38, 39, 39, 39, 40, 40, 41, 41, 41, 42, 42,
+	43, 43, 43, 44, 44, 45, 45, 45, 46, 46, 47, 47, 48, 48, 49, 49,
+	49, 50, 50, 51, 51, 52, 52, 53, 53, 53, 54, 54, 55, 55, 56, 56,
+	57, 57, 58, 58, 59, 59, 60, 60, 61, 61, 62, 62, 63, 63, 63, 64,
+}
+
 type CosmicUnicorn struct {
 	frames     [FRAME_COUNT][16 * FRAME_COL_SIZE]bool
 	brightness uint8
 }
 
-func (c *CosmicUnicorn) clear() {
+func (c *CosmicUnicorn) Clear() {
 	for frame := 0; frame < FRAME_COUNT; frame++ {
 		for idx := 0; idx < 16*FRAME_COL_SIZE; idx++ {
 			c.frames[frame][idx] = false
@@ -85,13 +104,13 @@ func (c *CosmicUnicorn) SetPixel(x, y int, r, g, b uint8) {
 		y -= 16
 	}
 
-	r32 := (uint32(r) * uint32(c.brightness)) >> 8
-	g32 := (uint32(g) * uint32(c.brightness)) >> 8
-	b32 := (uint32(b) * uint32(c.brightness)) >> 8
+	r32 := (uint16(r) * uint16(c.brightness)) >> 8
+	g32 := (uint16(g) * uint16(c.brightness)) >> 8
+	b32 := (uint16(b) * uint16(c.brightness)) >> 8
 
-	gammaR := GAMMA_8BIT[r32]
-	gammaG := GAMMA_8BIT[g32]
-	gammaB := GAMMA_8BIT[b32]
+	gammaR := GAMMA_6BIT[r32] * 4 // 6 to 8 bit scaling
+	gammaG := GAMMA_6BIT[g32] * 4 // 6 to 8 bit scaling
+	gammaB := GAMMA_6BIT[b32] * 4 // 6 to 8 bit scaling
 
 	for frame := 0; frame < FRAME_COUNT; frame++ {
 		c.frames[frame][y*FRAME_COL_SIZE+(x*3+0)] = gammaB&0b1 == 1
@@ -151,8 +170,47 @@ func (c *CosmicUnicorn) Init() {
 
 	time.Sleep(100 * time.Millisecond)
 
-	COLUMN_BLANK.Set(false)
+	prepare()
+}
 
+func prepare() {
+	var reg1 uint16 = 0b1111111111001110
+
+	// clock the register value to the first 11 driver chips
+	for j := 0; j < 11; j++ {
+		for i := 0; i < 16; i++ {
+			if reg1&(uint16(1)<<(15-i)) != 0 {
+				COLUMN_DATA.Set(true)
+			} else {
+				COLUMN_DATA.Set(false)
+			}
+			time.Sleep(time.Millisecond * 10)
+			COLUMN_CLOCK.Set(true)
+			time.Sleep(time.Millisecond * 10)
+			COLUMN_CLOCK.Set(false)
+		}
+	}
+
+	// clock the last chip and latch the value
+	for i := 0; i < 16; i++ {
+
+		if reg1&(uint16(1)<<(15-i)) != 0 {
+			COLUMN_DATA.Set(true)
+		} else {
+			COLUMN_DATA.Set(false)
+		}
+
+		time.Sleep(time.Millisecond * 10)
+		COLUMN_CLOCK.Set(true)
+		time.Sleep(time.Millisecond * 10)
+		COLUMN_CLOCK.Set(false)
+
+		if i == 4 {
+			COLUMN_LATCH.Set(true)
+		}
+	}
+
+	COLUMN_LATCH.Set(false)
 }
 
 var i uint64
@@ -165,14 +223,13 @@ func tick() {
 func (c *CosmicUnicorn) Draw() {
 	for frame := uint8(0); frame < FRAME_COUNT; frame++ {
 		for row := 0; row < ROW_COUNT; row++ {
-
+			COLUMN_DATA.Set(false)
 			ROW_BIT_0.Set(row&0b1 == 0b1)
 			ROW_BIT_1.Set(row&0b10 == 0b10)
 			ROW_BIT_2.Set(row&0b100 == 0b100)
 			ROW_BIT_3.Set(row&0b1000 == 0b1000)
 
 			for idx := 0; idx < FRAME_COL_SIZE; idx++ {
-				COLUMN_DATA.Set(false)
 				b := c.frames[frame][row*FRAME_COL_SIZE+idx]
 				if b {
 					COLUMN_DATA.Set(true)
@@ -181,9 +238,8 @@ func (c *CosmicUnicorn) Draw() {
 				COLUMN_CLOCK.Set(true)
 				tick()
 				COLUMN_CLOCK.Set(false)
+				COLUMN_DATA.Set(false)
 			}
-
-			tick()
 
 			COLUMN_LATCH.Set(true) // latch high, blank high
 			COLUMN_BLANK.Set(true)
@@ -192,19 +248,16 @@ func (c *CosmicUnicorn) Draw() {
 
 			COLUMN_BLANK.Set(false) // blank low (enable output)
 			COLUMN_LATCH.Set(false)
-			COLUMN_DATA.Set(false)
 
 			// Brightness is correlated with how long the LEDs are turned on before turning them off.
 			// Based on testing. The maximum "on" time before flickering seems to be
 			// around 1000µs when rendering with one frame.
-			bcd_ticks := (1 << (frame + 3)) + 1
+			bcd_ticks := (1 << frame)
 			for k := 0; k < bcd_ticks; k++ {
 				tick()
 			}
 
 			COLUMN_BLANK.Set(true) // blank high (disable output)
-			COLUMN_LATCH.Set(false)
-			COLUMN_DATA.Set(false)
 		}
 	}
 }
