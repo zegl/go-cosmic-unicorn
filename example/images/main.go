@@ -32,6 +32,7 @@ func main() {
 	// Press A to go to the next image
 	var pressedA = false
 	handleA := func() {
+		cu.Clear()
 		fileIdx = (fileIdx + 1) % len(files)
 		effect = &Image{name: files[fileIdx]}
 		effect.Init(cu.SetColor)
@@ -45,7 +46,7 @@ func main() {
 	// Press B to draw gradient
 	var pressedB = false
 	handleB := func() {
-		// drawGradient(cu.SetColor)
+		cu.Clear()
 		effect = &Gradient{}
 		effect.Init(cu.SetColor)
 	}
@@ -57,6 +58,7 @@ func main() {
 	// Press C to draw circle
 	var pressedC = false
 	handleC := func() {
+		cu.Clear()
 		effect = &Circle{}
 		effect.Init(cu.SetColor)
 	}
@@ -68,6 +70,7 @@ func main() {
 	// Press D to draw fire
 	var pressedD = false
 	handleD := func() {
+		cu.Clear()
 		effect = &Fire{}
 		effect.Init(cu.SetColor)
 	}
@@ -80,7 +83,7 @@ func main() {
 	var pressedBrightnessUp = false
 	handleBrightnessUp := func() {
 		cu.ChangeBrightness(10)
-		// drawImage(files[fileIdx], cu.SetColor)
+		effect.Init(cu.SetColor)
 	}
 	cosmic.SWITCH_BRIGHTNESS_UP.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
 	cosmic.SWITCH_BRIGHTNESS_UP.SetInterrupt(machine.PinFalling, func(p machine.Pin) {
@@ -91,7 +94,7 @@ func main() {
 	var pressedBrightnessDown = false
 	handleBrightnessDown := func() {
 		cu.ChangeBrightness(-10)
-		// drawImage(files[fileIdx], cu.SetColor)
+		effect.Init(cu.SetColor)
 	}
 	cosmic.SWITCH_BRIGHTNESS_DOWN.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
 	cosmic.SWITCH_BRIGHTNESS_DOWN.SetInterrupt(machine.PinFalling, func(p machine.Pin) {
@@ -100,7 +103,9 @@ func main() {
 
 	// Draw default image
 	// drawImage(files[fileIdx], cu.SetColor)
-	effect = &Fire{}
+	//effect = &Fire{}
+	effect = &Image{name: files[fileIdx]}
+
 	effect.Init(cu.SetColor)
 	effect.Draw(cu.SetColor)
 
